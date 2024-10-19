@@ -1,58 +1,67 @@
 import pygame
+import math
+
 pygame.init()
-window = pygame.display.set_mode((1500,900))
-pygame.display.set_caption('player movement')
-pygame.display.set_caption('Water shooter')
-clock=pygame.time.Clock()
-running=True
-surf=pygame.image.load('back.jpeg')
-ob1=pygame.image.load('sub1.png')
-ob2=pygame.image.load('sub1.png')
-ob3=pygame.image.load('sub1.png')
-ob4=pygame.image.load('sub1.png')
-ob5=pygame.image.load('sub1.png')
-player=pygame.image.load('sub2.jpg')
+window = pygame.display.set_mode((1500, 900))
+pygame.display.set_caption('Water Shooter')
+clock = pygame.time.Clock()
+running = True
+
+# Load images
+surf = pygame.image.load('back.jpeg')
+ob_image = pygame.image.load('sub1.png')
+player = pygame.image.load('sub2.jpg')
+
+# Load music
 pygame.mixer.music.load('arcade.mp3')
 pygame.mixer.music.play(-1)
-x=900 
-y=300
-v=12
-a=0
-b=10
+
+# Initial positions
+x = 900
+y = 300
+obstacle_positions = [50, 200, 350, 500, 650]  # Starting Y positions for obstacles
+
+# Animation parameters
+time = 0
+speed = 0.02  # Controls the speed of the vertical motion
+horizontal_amplitude = 30  # Horizontal movement range
+
 while running:
-    #Background
-    window.blit(surf,(0,0))
+    # Background
+    window.blit(surf, (0, 0))
     
-    
-    window.blit(ob1,(0,50+a))
-    window.blit(ob2,(0,200+a))
-    window.blit(ob3,(0,350+a))
-    window.blit(ob4,(0,500+a))
-    window.blit(ob5,(0,650+a))
-        
-    window.blit(player,(x,y))
-    # event loop
+    # Update and draw obstacles
+    for i in range(len(obstacle_positions)):
+        # Move the obstacles up and down using a sine wave
+        vertical_offset = math.sin(time + i) * 20  # Vertical movement
+        horizontal_offset = math.sin(time + i) * horizontal_amplitude  # Horizontal movement
+        window.blit(ob_image, ( horizontal_offset, obstacle_positions[i] + vertical_offset))
+
+    # Draw player
+    window.blit(player, (x, y))
+
+    # Event loop
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-            pygame.quit()
-            quit()
-    clock.tick(60)
-
 
     keys = pygame.key.get_pressed()
 
-    # Changing the coordinates 
-    # of the player 
-    if keys[pygame.K_LEFT] and x>=400:
-        x -= 8 
-    if keys[pygame.K_RIGHT] and x<1200:
-        x += 8 
-    if keys[pygame.K_UP] and y>=-50:
-        y -= 8 
-    if keys[pygame.K_DOWN] and y<650:
-        y += 8 
-    
+    # Player movement
+    if keys[pygame.K_LEFT] and x >= 400:
+        x -= 8
+    if keys[pygame.K_RIGHT] and x < 1200:
+        x += 8
+    if keys[pygame.K_UP] and y > -50:  # Prevent moving off the top
+        y -= 8
+    if keys[pygame.K_DOWN] and y < 650:  # Prevent moving off the bottom
+        y += 8
+
+    # Increment time for obstacle movement
+    time += speed
+
+    # Update display
     pygame.display.update()
+    clock.tick(60)
+
 pygame.quit()
-    
