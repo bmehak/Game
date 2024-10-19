@@ -1,0 +1,221 @@
+import pygame
+import math
+import time
+import subprocess
+import sys
+
+# Initialize Pygame
+pygame.init()
+
+
+
+
+def run_game():
+    # Initialize Pygame
+    pygame.init()
+    window = pygame.display.set_mode((1600, 900))
+    pygame.display.set_caption('Water Shooter')
+    clock = pygame.time.Clock()
+
+    # Load images
+    surf = pygame.image.load('back.jpeg')
+    fire = pygame.image.load('fire.jpg')
+    fire1 = pygame.image.load('bullet.jpeg')  # Bullet image for obstacles
+    ob_image = pygame.image.load('sub1.png')
+    player_image = pygame.image.load('sub2.jpg')
+
+    # Load music
+    pygame.mixer.music.load('arcade.mp3')
+    game_over_sound = pygame.mixer.Sound('game_over.mp3')
+    achieve_sound = pygame.mixer.Sound('achievement.mp3')
+    hit_sound = pygame.mixer.Sound('hit.mp3')
+    pygame.mixer.music.play(-1)
+
+    def reset_game():
+        global x, y, obstacle_active, last_shot_times, shooting_index, player_projectiles, obstacle_bullets, lives
+        x = 1100
+        y = 300
+        obstacle_active = [True] * len(obstacle_positions)
+        last_shot_times[:] = [0] * len(obstacle_positions)
+        shooting_index = 0
+        player_projectiles.clear()
+        obstacle_bullets.clear()
+        lives = 3
+        return True
+
+    # Initial positions
+    x = 1100
+    y = 300
+    lives = 3
+    obstacle_positions = [0, 175, 350, 525, 700]
+    obstacle_active = [True] * len(obstacle_positions)
+    last_shot_times = [0] * len(obstacle_positions)
+    shooting_index = 0
+
+    # Animation parameters
+    time_var = 0
+    speed = 0.02
+    horizontal_amplitude = 30
+
+    # Projectile lists
+    player_projectiles = []
+    obstacle_bullets = []
+    bullet_speed = 10
+    obstacle_shoot_delay = 0.75
+    change_shooting_delay = 0.75
+
+    # Projectile class for player
+    class Projectile:
+        def __init__(self, x, y):
+            self.x = x
+            self.y = y
+            self.speed = 10
+
+        def update(self):
+            self.x -= self.speed
+
+        def draw(self, surface):
+            surface.blit(fire, (self.x, self.y))
+
+        def get_rect(self):
+            return pygame.Rect(self.x, self.y, fire.get_width(), fire.get_height())
+
+    # Bullet class for obstacles
+    class Bullet:
+        def __init__(self, x, y):
+            self.x = x
+            self.y = y
+            self.speed = bullet_speed
+
+        def update(self):
+            self.x += self.speed
+
+        def draw(self, surface):
+            surface.blit(fire1, (self.x, self.y))
+
+        def get_rect(self):
+            return pygame.Rect(self.x, self.y, fire1.get_width(), fire1.get_height())
+
+    # Shooting control variables for player
+    can_shoot = True
+    shoot_delay = 0.4
+    last_shot_time = 0
+
+    # Timer for changing the shooting obstacle
+    last_change_time = time.time()
+
+    # Main game loop
+    reset_game()
+    while True:
+        window.blit(surf, (0, 0))
+
+        # Clear final positions for the current frame
+        final_obstacle_positions = []
+
+        # Update and draw obstacles
+        for i in range(len(obstacle_positions)):
+            if obstacle_active[i]:
+                vertical_offset = math.sin(time_var + i) * 20
+                horizontal_offset = 200 + math.sin(time_var + i) * horizontal_amplitude
+                final_obstacle_positions.append((horizontal_offset, obstacle_positions[i] + vertical_offset))
+                window.blit(ob_image, (horizontal_offset, obstacle_positions[i] + vertical_offset))
+
+                # Shooting logic for the current obstacle
+                current_time = time.time()
+                if i == shooting_index and current_time - last_shot_times[i] >= obstacle_shoot_delay:
+                    obstacle_bullets.append(Bullet(horizontal_offset + 220, obstacle_positions[i]))
+                    last_shot_times[i] = current_time
+
+        # Check for collisions between obstacle bullets and player
+        player_rect = pygame.Rect(x, y, player_image.get_width(), player_image.get_height())
+        for bullet in obstacle_bullets:
+            if bullet.get_rect().colliderect(player_rect):
+                lives -= 1
+                hit_sound.play()  # Play hit sound
+                obstacle_bullets.remove(bullet)
+                break
+
+        # Draw player
+        window.blit(player_image, (x, y))
+
+        # Draw lives
+        font = pygame.font.Font(None, 36)
+        lives_text = font.render(f'Lives: {lives}', True, (255, 255, 255))
+        window.blit(lives_text, (10, 10))
+
+        # Check if the player is out of lives
+        if lives <= 0:
+            game_over_sound.play()  # Play game over sound
+            font = pygame.font.Font(None, 74)
+            text = font.render('Game Over', True, (255, 0, 0))
+            window.blit(text, (window.get_width() // 2 - text.get_width() // 2, window.get_height() // 2 - text.get_height() // 2))
+            text_restart = font.render('Press R to Restart', True, (255, 255, 255))
+            window.blit(text_restart, (window.get_width() // 2 - text_restart.get_width() // 2, window.get_height() // 2 + 50))
+
+            # Check for restart
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_r]:
+                reset_game()
+        else:
+            # Update and draw projectiles from player
+            for projectile in player_projectiles:
+                projectile.update()
+                projectile.draw(window)
+
+            # Check for collisions between player projectiles and obstacles
+            for i in range(len(obstacle_positions)):
+                if obstacle_active[i]:
+                    obstacle_rect = pygame.Rect(final_obstacle_positions[i][0], final_obstacle_positions[i][1], ob_image.get_width(), ob_image.get_height())
+                    for projectile in player_projectiles:
+                        if projectile.get_rect().colliderect(obstacle_rect):
+                            obstacle_active[i] = False
+                            player_projectiles.remove(projectile)
+                            achieve_sound.play()  # Play achievement sound
+                            break
+
+            # Update and draw bullets from obstacles
+            for bullet in obstacle_bullets:
+                bullet.update()
+                bullet.draw(window)
+
+            # Event loop
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    exit()
+
+            # Player movement
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_LEFT] and x >= 400:
+                x -= 8
+            if keys[pygame.K_RIGHT] and x < 1200:
+                x += 8
+            if keys[pygame.K_UP] and y > -50:
+                y -= 8
+            if keys[pygame.K_DOWN] and y < 650:
+                y += 8
+
+            # Shooting logic for player
+            current_time = time.time()
+            if keys[pygame.K_SPACE] and can_shoot:
+                player_projectiles.append(Projectile(x + 50, y + 20))
+                can_shoot = False
+                last_shot_time = current_time
+
+            if not can_shoot and current_time - last_shot_time >= shoot_delay:
+                can_shoot = True
+
+            # Change shooting obstacle periodically
+            if current_time - last_change_time >= change_shooting_delay:
+                shooting_index = (shooting_index + 1) % len(obstacle_positions)
+                last_change_time = current_time
+
+            # Increment time for obstacle movement
+            time_var += speed
+
+        # Update display
+        pygame.display.update()
+        clock.tick(60)
+
+if __name__ == "__main__":
+    run_game()
