@@ -1,33 +1,58 @@
 import pygame
 pygame.init()
-WIDTH,HEIGHT = 1100,900
-display_surface = pygame.display.set_mode((WIDTH,HEIGHT))
+window = pygame.display.set_mode((1500,900))
+pygame.display.set_caption('player movement')
 pygame.display.set_caption('Water shooter')
+clock=pygame.time.Clock()
 running=True
-surf=pygame.image.load('bk.jpeg')
+surf=pygame.image.load('back.jpeg')
 ob1=pygame.image.load('sub1.png')
 ob2=pygame.image.load('sub1.png')
 ob3=pygame.image.load('sub1.png')
 ob4=pygame.image.load('sub1.png')
 ob5=pygame.image.load('sub1.png')
-play=pygame.image.load('sub2.jpg')
+player=pygame.image.load('sub2.jpg')
+pygame.mixer.music.load('arcade.mp3')
+pygame.mixer.music.play(-1)
+x=900 
+y=300
+v=12
 a=0
-b=0
+b=10
 while running:
+    #Background
+    window.blit(surf,(0,0))
+    
+    
+    window.blit(ob1,(0,50+a))
+    window.blit(ob2,(0,200+a))
+    window.blit(ob3,(0,350+a))
+    window.blit(ob4,(0,500+a))
+    window.blit(ob5,(0,650+a))
+        
+    window.blit(player,(x,y))
     # event loop
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-    #Background
-    a += 0.7
-    b += 0.1
-    display_surface.blit(surf,(0,0))
-    display_surface.blit(ob1,(0,50))
-    display_surface.blit(ob2,(0,200))
-    display_surface.blit(ob3,(0,350))
-    display_surface.blit(ob4,(0,500))
-    display_surface.blit(ob5,(0,650))
-    display_surface.blit(play,(800,300))
+            pygame.quit()
+            quit()
+    clock.tick(60)
+
+
+    keys = pygame.key.get_pressed()
+
+    # Changing the coordinates 
+    # of the player 
+    if keys[pygame.K_LEFT] and x>=400:
+        x -= 8 
+    if keys[pygame.K_RIGHT] and x<1200:
+        x += 8 
+    if keys[pygame.K_UP] and y>=-50:
+        y -= 8 
+    if keys[pygame.K_DOWN] and y<650:
+        y += 8 
+    
     pygame.display.update()
 pygame.quit()
     
