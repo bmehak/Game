@@ -10,13 +10,16 @@ running = True
 
 # Load images
 surf = pygame.image.load('back.jpeg')
-fire = pygame.image.load('fire.jpg')
+fire = pygame.image.load('fire.jpg')  # Player projectile
 fire1 = pygame.image.load('bullet.jpeg')  # Bullet image for obstacles
 ob_image = pygame.image.load('sub1.png')
 player_image = pygame.image.load('sub2.jpg')
 
 # Load music
 pygame.mixer.music.load('arcade.mp3')
+achievement_sound = pygame.mixer.Sound('achievement.mp3')
+game_over_sound = pygame.mixer.Sound('game_over.mp3')
+hit_sound = pygame.mixer.Sound('hit.mp3')
 pygame.mixer.music.play(-1)
 
 # Initial positions
@@ -37,7 +40,7 @@ player_projectiles = []
 obstacle_bullets = []
 bullet_speed = 10  # Speed of bullets from obstacles
 obstacle_shoot_delay = 1  # Time in seconds for obstacle shooting
-change_shooting_delay = 1 # Time in seconds to change the shooting obstacle
+change_shooting_delay = 1  # Time in seconds to change the shooting obstacle
 
 # Projectile class for player
 class Projectile:
@@ -105,7 +108,10 @@ while running:
         player_rect = pygame.Rect(x, y, player_image.get_width(), player_image.get_height())
         for bullet in obstacle_bullets:
             if bullet.get_rect().colliderect(player_rect):
+                hit_sound.play()  # Play hit sound
                 player_active = False  # Deactivate the player
+                pygame.mixer.music.stop()  # Stop background music
+                game_over_sound.play()  # Play game over sound
                 break  # Exit the loop after one collision
 
     # Draw player if active
@@ -125,6 +131,7 @@ while running:
                 if projectile.get_rect().colliderect(obstacle_rect):
                     obstacle_active[i] = False  # Deactivate the obstacle
                     player_projectiles.remove(projectile)  # Remove the projectile that hit the obstacle
+                    achievement_sound.play()  # Play achievement sound
                     break  # Exit the loop after one collision
 
     # Update and draw bullets from obstacles
