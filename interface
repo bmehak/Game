@@ -1,4 +1,4 @@
-mport pygame, sys
+import pygame, sys
 import subprocess
 from button import Button
 
