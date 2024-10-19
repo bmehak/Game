@@ -39,7 +39,7 @@ horizontal_amplitude = 30  # Horizontal movement range
 player_projectiles = []
 obstacle_bullets = []
 bullet_speed = 10  # Speed of bullets from obstacles
-obstacle_shoot_delay = 1  # Time in seconds for obstacle shooting
+obstacle_shoot_delay =  1 # Time in seconds for obstacle shooting
 change_shooting_delay = 1  # Time in seconds to change the shooting obstacle
 
 # Projectile class for player
@@ -84,10 +84,33 @@ last_change_time = time.time()
 
 # Player active status
 player_active = True
+won = False  # Track if the player has won
 
 while running:
     # Background
     window.blit(surf, (0, 0))
+
+    if not player_active:
+        # If the player is not active, show game over screen
+        window.blit(surf, (0, 0))  # Background
+        game_over_sound.play()
+        pygame.mixer.music.stop()
+        font = pygame.font.Font(None, 74)
+        text = font.render("Game Over", True, (255, 0, 0))
+        window.blit(text, (600, 400))
+        pygame.display.update()
+        time.sleep(2)  # Wait before quitting
+        break
+
+    if won:
+        # If all obstacles are hit, show win screen
+        window.blit(surf, (0, 0))  # Background
+        font = pygame.font.Font(None, 74)
+        text = font.render("You Won!", True, (0, 255, 0))
+        window.blit(text, (600, 400))
+        pygame.display.update()
+        time.sleep(2)  # Wait before quitting
+        break
 
     # Update and draw obstacles
     for i in range(len(obstacle_positions)):
@@ -133,6 +156,10 @@ while running:
                     player_projectiles.remove(projectile)  # Remove the projectile that hit the obstacle
                     achievement_sound.play()  # Play achievement sound
                     break  # Exit the loop after one collision
+
+    # Check if all obstacles are hit
+    if all(not active for active in obstacle_active):
+        won = True  # Set won to true if all obstacles are hit
 
     # Update and draw bullets from obstacles
     for bullet in obstacle_bullets:
