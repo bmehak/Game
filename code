@@ -1,0 +1,33 @@
+import pygame
+pygame.init()
+WIDTH,HEIGHT = 1100,900
+display_surface = pygame.display.set_mode((WIDTH,HEIGHT))
+pygame.display.set_caption('Water shooter')
+running=True
+surf=pygame.image.load('back.jpeg')
+ob1=pygame.image.load('sub1.png')
+ob2=pygame.image.load('sub1.png')
+ob3=pygame.image.load('sub1.png')
+ob4=pygame.image.load('sub1.png')
+ob5=pygame.image.load('sub1.png')
+play=pygame.image.load('sub2.jpg')
+a=0
+b=0
+while running:
+    # event loop
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+    #Background
+    a += 0.7
+    b += 0.1
+    display_surface.blit(surf,(0,0))
+    display_surface.blit(ob1,(0,50))
+    display_surface.blit(ob2,(0,200))
+    display_surface.blit(ob3,(0,350))
+    display_surface.blit(ob4,(0,500))
+    display_surface.blit(ob5,(0,650))
+    display_surface.blit(play,(800,300))
+    pygame.display.update()
+pygame.quit()
+    
