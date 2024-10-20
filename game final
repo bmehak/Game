@@ -1,0 +1,213 @@
+import pygame
+import math
+import time
+import random  # Import random for random shooting intervals
+
+pygame.init()
+window = pygame.display.set_mode((1500, 850))
+pygame.display.set_caption('Water Shooter')
+clock = pygame.time.Clock()
+running = True
+
+# Load images
+surf = pygame.image.load('back.jpeg')
+fire = pygame.image.load('fire.jpg')  # Player projectile
+fire1 = pygame.image.load('bullet.jpeg')  # Bullet image for obstacles
+ob_image = pygame.image.load('sub1.png')
+player_image = pygame.image.load('sub2.jpg')
+
+# Load music
+pygame.mixer.music.load('arcade.mp3')
+achievement_sound = pygame.mixer.Sound('achievement.mp3')
+game_over_sound = pygame.mixer.Sound('game_over.mp3')
+hit_sound = pygame.mixer.Sound('hit.mp3')
+pygame.mixer.music.play(-1)
+
+# Initial positions
+x = 1100
+y = 300
+obstacle_positions = [0, 175, 350, 525, 650]  # Starting Y positions for obstacles
+obstacle_active = [True] * len(obstacle_positions)  # Track active status of obstacles
+last_shot_times = [0] * len(obstacle_positions)  # Last shot times for each obstacle
+obstacle_shoot_delays = [random.uniform(1, 3) for _ in range(len(obstacle_positions))]  # Random delays for each obstacle
+
+# Animation parameters
+time_var = 0
+speed = 0.02  # Controls the speed of the vertical motion
+horizontal_amplitude = 30  # Horizontal movement range
+
+# Projectile lists
+player_projectiles = []
+obstacle_bullets = []
+bullet_speed = 5  # Speed of bullets from obstacles
+
+# Add player health
+player_health = 100  # Initial health
+max_health = 100     # Maximum health
+lifeline_bar_length = 400  # Length of the health bar
+
+# Projectile class for player
+class Projectile:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.speed = 10  # Speed of the projectile
+
+    def update(self):
+        self.x -= self.speed  # Move left
+
+    def draw(self, surface):
+        surface.blit(fire, (self.x, self.y))
+
+    def get_rect(self):
+        return pygame.Rect(self.x, self.y, fire.get_width(), fire.get_height())
+
+# Bullet class for obstacles
+class Bullet:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.speed = bullet_speed  # Speed of the bullet
+
+    def update(self):
+        self.x += self.speed  # Move right
+
+    def draw(self, surface):
+        surface.blit(fire1, (self.x, self.y))
+
+    def get_rect(self):
+        return pygame.Rect(self.x, self.y, fire1.get_width(), fire1.get_height())
+
+# Shooting control variables for player
+can_shoot = True
+shoot_delay = 0.5  # Time in seconds for player shooting
+last_shot_time = 0  # Timestamp of the last shot
+
+# Player active status
+player_active = True
+won = False  # Track if the player has won
+
+def draw_health_bar(surface, x, y, health, max_health, bar_length):
+    # Draw the background of the health bar (red)
+    pygame.draw.rect(surface, (255, 0, 0), (x, y, bar_length, 20))
+    # Calculate the width of the health based on the current health percentage
+    current_health_width = int((health / max_health) * bar_length)
+    # Draw the health (green)
+    pygame.draw.rect(surface, (0, 255, 0), (x, y, current_health_width, 20))
+
+while running:
+    # Background
+    window.blit(surf, (0, 0))
+
+    if not player_active:
+        # If the player is not active, show game over screen
+        window.blit(surf, (0, 0))  # Background
+        font = pygame.font.Font(None, 74)
+        text = font.render("Game Over", True, (255, 0, 0))
+        window.blit(text, (600, 400))
+        pygame.display.update()
+        time.sleep(2)  # Wait before quitting
+        break
+
+    if won:
+        # If all obstacles are hit, show win screen
+        window.blit(surf, (0, 0))  # Background
+        font = pygame.font.Font(None, 74)
+        text = font.render("You Won!", True, (0, 255, 0))
+        window.blit(text, (600, 400))
+        pygame.display.update()
+        time.sleep(2)  # Wait before quitting
+        break
+
+    # Update and draw obstacles
+    for i in range(len(obstacle_positions)):
+        if obstacle_active[i]:  # Only draw active obstacles
+            # Move the obstacles up and down using a sine wave
+            vertical_offset = math.sin(time_var + i) * 20  # Vertical movement
+            horizontal_offset = 200 + math.sin(time_var + i) * horizontal_amplitude  # Fixed horizontal position with movement
+            window.blit(ob_image, (horizontal_offset, obstacle_positions[i] + vertical_offset))
+
+            # Shooting logic for all active obstacles with random delays
+            current_time = time.time()  # Get the current time
+            if current_time - last_shot_times[i] >= obstacle_shoot_delays[i]:
+                obstacle_bullets.append(Bullet(horizontal_offset + 220, obstacle_positions[i] + vertical_offset))  # Adjust bullet starting position
+                last_shot_times[i] = current_time  # Update last shot time for this obstacle
+                obstacle_shoot_delays[i] = random.uniform(1, 3)  # Set a new random delay for the next shot
+
+    # Check for collisions between obstacle bullets and player
+    if player_active:  # Only check if the player is active
+        player_rect = pygame.Rect(x, y, player_image.get_width(), player_image.get_height())
+        for bullet in obstacle_bullets:
+            if bullet.get_rect().colliderect(player_rect):
+                hit_sound.play()  # Play hit sound
+                player_health -= 20  # Reduce player health by 20
+                obstacle_bullets.remove(bullet)  # Remove the bullet after hitting
+                if player_health <= 0:  # If health reaches zero, game over
+                    player_active = False  # Deactivate the player
+                    pygame.mixer.music.stop()  # Stop background music
+                    game_over_sound.play()  # Play game over sound
+                    break  # Exit the loop after one collision
+
+    # Draw player if active
+    if player_active:
+        window.blit(player_image, (x, y))
+        draw_health_bar(window, 50, 30, player_health, max_health, lifeline_bar_length)  # Draw health bar
+
+    # Update and draw projectiles from player
+    for projectile in player_projectiles:
+        projectile.update()
+        projectile.draw(window)
+
+    # Check for collisions between player projectiles and obstacles
+    for i in range(len(obstacle_positions)):
+        if obstacle_active[i]:
+            # Ensure vertical_offset is recalculated for this obstacle
+            vertical_offset = math.sin(time_var + i) * 20
+            horizontal_offset = 200 + math.sin(time_var + i) * horizontal_amplitude
+            obstacle_rect = pygame.Rect(horizontal_offset, obstacle_positions[i] + vertical_offset, ob_image.get_width(), ob_image.get_height())
+            for projectile in player_projectiles:
+                if projectile.get_rect().colliderect(obstacle_rect):
+                    obstacle_active[i] = False  # Deactivate the obstacle
+                    player_projectiles.remove(projectile)  # Remove the projectile that hit the obstacle
+                    achievement_sound.play()  # Play achievement sound
+                    break  # Exit the loop after one collision
+
+    # Check if all obstacles are hit
+    if all(not active for active in obstacle_active):
+        won = True  # Set won to true if all obstacles are hit
+
+    # Update and draw bullets from obstacles
+    for bullet in obstacle_bullets:
+        bullet.update()
+        bullet.draw(window)
+
+    # Event loop
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    keys = pygame.key.get_pressed()
+
+    # Player movement
+    if player_active:  # Only allow movement if the player is active
+        if keys[pygame.K_LEFT] and x >= 400:
+            x -= 8
+        if keys[pygame.K_RIGHT] and x < 1200:
+            x += 8
+        if keys[pygame.K_UP] and y > -50:  # Prevent moving off the top
+            y -= 8
+        if keys[pygame.K_DOWN] and y < 650:  # Prevent moving off the bottom
+            y += 8
+
+        # Shooting logic for player
+        current_time = time.time()  # Get the current time
+        if keys[pygame.K_SPACE] and can_shoot and current_time - last_shot_time >= shoot_delay:
+            player_projectiles.append(Projectile(x, y + player_image.get_height() // 2))  # Shoot from the player's position
+            last_shot_time = current_time  # Update the last shot time
+
+    # Increment the time variable to move obstacles
+    time_var += speed
+
+    # Update the display
+    pygame.display.update()
+pygame.quit()
